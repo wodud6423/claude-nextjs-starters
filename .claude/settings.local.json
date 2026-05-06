@@ -13,11 +13,25 @@
       "mcp__playwright",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\" -Recurse -Directory)",
       "Bash(Select-Object FullName)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\.claude\" -Recurse -Force | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\\", \"\"\\) })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\.claude\" -Recurse -Force | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\\", \"\"\\) })",
+      "WebSearch"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright"
-  ]
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-log.sh\""
+          }
+        ]
+      }
+    ]
+  }
 }
