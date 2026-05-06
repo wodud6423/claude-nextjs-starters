@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "clang-format",
+  "owner": "jamie-bitflight",
+  "repo": "claude_skills",
+  "path": "plugins/clang-format/skills/clang-format",
+  "branch": "main",
+  "sha": "5cfd14fcb29591e195c09137f9470d10a4d36871",
+  "source": "manual"
+}
