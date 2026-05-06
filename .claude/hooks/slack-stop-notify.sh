@@ -13,57 +13,79 @@ if [ -z "$SLACK_WEBHOOK_URL" ]; then
 fi
 
 # 기본 필드 추출
-PROJECT_NAME=$(echo "$INPUT" | jq -r '.cwd // "" | split("/") | last | if . == "" then "unknown" else . end')
+# cwd는 Windows 경로이므로 마지막 경로 구성요소를 추출
+PROJECT_NAME=$(echo "$INPUT" | jq -r '.cwd // "unknown"' | sed 's/.*[/\\]//')
 SESSION_ID=$(echo "$INPUT" | jq -r '(.session_id // "")[:8]')
-STOP_REASON=$(echo "$INPUT" | jq -r '.stop_reason // "unknown"')
+SESSION_ID_FULL=$(echo "$INPUT" | jq -r '.session_id // ""')
+# Stop 훅 INPUT에는 stop_reason이 없고 stop_hook_active가 있음
+# stop_hook_active=false → 정상 종료, true → 훅에 의한 중단
+STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // ""')
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# 성공/실패 판단
-if [ "$STOP_REASON" = "end_turn" ]; then
+# Windows 경로를 Git Bash POSIX 경로로 변환 (C:\foo\bar → /c/foo/bar)
+TRANSCRIPT_PATH_POSIX=$(echo "$TRANSCRIPT_PATH" | sed 's|\\|/|g' | sed 's|^\([A-Za-z]\):|/\L\1|')
+
+# 성공/실패 판단: stop_hook_active=false이면 정상 종료
+if [ "$STOP_HOOK_ACTIVE" = "false" ]; then
     STATUS="✅ 성공"
     IS_ERROR=false
 else
-    STATUS="❌ 실패 ($STOP_REASON)"
+    STATUS="❌ 중단 (훅에 의해)"
     IS_ERROR=true
 fi
 
-# 작업 내용: assistant 첫 응답 첫 줄(목표 요약)을 추출
+# 작업 내용: 현재 세션의 첫 번째 실제 user 메시지 추출
+# transcript 필드명: sessionId (camelCase), message.role
 LAST_PROMPT=""
-if [ -f "$TRANSCRIPT_PATH" ]; then
-    LAST_PROMPT=$(jq -r 'select(.message.role == "assistant") | .message.content[]? | select(.type == "text") | .text' "$TRANSCRIPT_PATH" 2>/dev/null \
-        | head -1 | sed 's/^[[:space:]]*//' | cut -c1-200)
+if [ -f "$TRANSCRIPT_PATH_POSIX" ]; then
+    LAST_PROMPT=$(jq -rR \
+        --arg sid "$SESSION_ID_FULL" \
+        '. as $line | try fromjson |
+         select(.sessionId == $sid) |
+         select(.type == "user") |
+         select(.isMeta != true) |
+         .message.content |
+         if type == "array" then .[]? | select(.type == "text") | .text
+         elif type == "string" then .
+         else empty end' \
+        "$TRANSCRIPT_PATH_POSIX" 2>/dev/null \
+        | grep -v "^<" | head -1 | sed 's/^[[:space:]]*//' | cut -c1-200)
 fi
 if [ -z "$LAST_PROMPT" ]; then
     LAST_PROMPT="(작업 내용 없음)"
 fi
 
-# 실행 시간: transcript 첫/마지막 타임스탬프 차이
+# 실행 시간: 마지막 user 메시지 ~ 마지막 레코드 타임스탬프 차이 (Node.js로 계산)
 ELAPSED="측정 불가"
-if [ -f "$TRANSCRIPT_PATH" ]; then
-    FIRST_TS=$(jq -r '.timestamp // empty' "$TRANSCRIPT_PATH" 2>/dev/null | head -1)
-    LAST_TS=$(jq -r '.timestamp // empty' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
-    if [ -n "$FIRST_TS" ] && [ -n "$LAST_TS" ]; then
-        T1=$(date -d "$FIRST_TS" +%s 2>/dev/null)
-        T2=$(date -d "$LAST_TS" +%s 2>/dev/null)
-        if [ -n "$T1" ] && [ -n "$T2" ]; then
-            DIFF=$((T2 - T1))
-            ELAPSED="${DIFF}초"
-        fi
-    fi
-fi
-
-# 실패 원인 분석 (3분 제한)
-FAILURE_REASON=""
-if [ "$IS_ERROR" = true ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    FAILURE_REASON=$(timeout 180 bash -c "
-        jq -r 'select(.message.role == \"assistant\") | .message.content[]? | select(.type == \"text\") | .text' \"$TRANSCRIPT_PATH\" 2>/dev/null \
-        | tail -1 | cut -c1-200
-    " 2>/dev/null)
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -eq 124 ] || [ -z "$FAILURE_REASON" ]; then
-        FAILURE_REASON="3분안에 원인을 규명하지 못했습니다!"
-    fi
+if [ -f "$TRANSCRIPT_PATH_POSIX" ] && [ -n "$SESSION_ID_FULL" ]; then
+    ELAPSED=$(node -e "
+const fs = require('fs');
+const sid = '$SESSION_ID_FULL';
+let lastUserTs = null;
+let lastTs = null;
+try {
+  const lines = fs.readFileSync('$TRANSCRIPT_PATH_POSIX', 'utf8').split('\n').filter(Boolean);
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      if (obj.sessionId !== sid) continue;
+      if (!obj.timestamp) continue;
+      const t = new Date(obj.timestamp).getTime();
+      if (isNaN(t)) continue;
+      lastTs = t;
+      if (obj.type === 'user' && !obj.isMeta) {
+        lastUserTs = t;
+      }
+    } catch(e) {}
+  }
+} catch(e) {}
+if (lastUserTs !== null && lastTs !== null && lastTs > lastUserTs) {
+  console.log(Math.round((lastTs - lastUserTs) / 1000) + '초');
+} else {
+  console.log('측정 불가');
+}
+" 2>/dev/null || echo "측정 불가")
 fi
 
 # Slack payload 생성
@@ -73,7 +95,6 @@ PAYLOAD=$(jq -n \
   --arg prompt "$LAST_PROMPT" \
   --arg status "$STATUS" \
   --arg elapsed "$ELAPSED" \
-  --arg failure "$FAILURE_REASON" \
   --arg timestamp "$TIMESTAMP" \
   --argjson is_error "$IS_ERROR" \
   '{
@@ -97,9 +118,9 @@ PAYLOAD=$(jq -n \
         ]
       }
     ] +
-    (if $is_error and ($failure != "") then [{
+    (if $is_error then [{
       type: "section",
-      text: { type: "mrkdwn", text: ("*실패 원인*\n" + $failure) }
+      text: { type: "mrkdwn", text: "*실패 원인*\n훅에 의해 세션이 중단되었습니다." }
     }] else [] end) +
     [{
       type: "context",
