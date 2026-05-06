@@ -21,6 +21,7 @@ export function CategoryCard({
   return (
     <button
       onClick={onClick}
+      aria-pressed={isActive}
       className={cn(
         "group relative flex flex-col gap-3 rounded-xl border p-5 text-left transition-all w-full",
         "hover:border-primary/50 hover:shadow-md",

@@ -12,7 +12,8 @@
       "Bash(npx next *)",
       "mcp__playwright",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\" -Recurse -Directory)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\.claude\" -Recurse -Force | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\\", \"\"\\) })"
     ]
   },
   "enableAllProjectMcpServers": true,

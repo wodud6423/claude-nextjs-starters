@@ -10,6 +10,7 @@ export const SITE_CONFIG = {
 
 export const THEME_STORAGE_KEY = 'theme'
 export const TOAST_DURATION = 4000
+export const MAX_TOAST_COUNT = 5
 
 export const SOCIAL_LINKS = [
   { label: 'GitHub', href: 'https://github.com', external: true },

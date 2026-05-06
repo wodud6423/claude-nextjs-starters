@@ -28,18 +28,25 @@ function resolveTheme(theme: Theme): 'light' | 'dark' {
   return theme
 }
 
+const VALID_THEMES = ['light', 'dark', 'system'] as const
+
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
   storageKey = THEME_STORAGE_KEY,
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(defaultTheme)
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // 저장된 테마 로드
   React.useEffect(() => {
-    const stored = localStorage.getItem(storageKey) as Theme | null
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      setThemeState(stored)
+    const stored = localStorage.getItem(storageKey)
+    if (stored && (VALID_THEMES as readonly string[]).includes(stored)) {
+      setThemeState(stored as Theme)
     }
   }, [storageKey])
 
@@ -68,6 +75,8 @@ export function ThemeProvider({
   }, [storageKey])
 
   const resolvedTheme = resolveTheme(theme)
+
+  if (!mounted) return <>{children}</>
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
