@@ -15,7 +15,18 @@
       "Bash(Select-Object FullName)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\.claude\" -Recurse -Force | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\\\\\", \"\"\\) })",
       "WebSearch",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\) {\"DIR\"} else {\"FILE\"}}} | Format-Table -AutoSize)"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\wodud\\\\workspace\\\\courses\\\\claude-nextjs-starters\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\) {\"DIR\"} else {\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-Command *)",
+      "WebFetch(domain:www.schemastore.org)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(cp /c/Users/wodud/.claude/hooks/slack-permission-notify.sh \"/c/Users/wodud/workspace/courses/claude-nextjs-starters/.claude/hooks/slack-permission-notify.sh\")",
+      "Bash(cp /c/Users/wodud/.claude/hooks/slack-stop-notify.sh \"/c/Users/wodud/workspace/courses/claude-nextjs-starters/.claude/hooks/slack-stop-notify.sh\")",
+      "Bash(chmod +x \"/c/Users/wodud/workspace/courses/claude-nextjs-starters/.claude/hooks/slack-permission-notify.sh\")",
+      "Bash(chmod +x \"/c/Users/wodud/workspace/courses/claude-nextjs-starters/.claude/hooks/slack-stop-notify.sh\")",
+      "Bash(cp /c/Users/wodud/.claude/.env.slack \"/c/Users/wodud/workspace/courses/claude-nextjs-starters/.claude/.env.slack\")",
+      "Bash(rm /c/Users/wodud/.claude/.env.slack)",
+      "Bash(rm /c/Users/wodud/.claude/hooks/slack-permission-notify.sh)",
+      "Bash(rm /c/Users/wodud/.claude/hooks/slack-stop-notify.sh)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -30,6 +41,29 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-log.sh\""
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/slack-permission-notify.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/slack-stop-notify.sh\"",
+            "timeout": 190
           }
         ]
       }
