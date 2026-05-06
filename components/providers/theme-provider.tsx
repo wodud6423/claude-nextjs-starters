@@ -8,6 +8,7 @@ interface ThemeContextValue {
   theme: Theme
   setTheme: (theme: Theme) => void
   resolvedTheme: 'light' | 'dark'
+  mounted: boolean
 }
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null)
@@ -76,10 +77,8 @@ export function ThemeProvider({
 
   const resolvedTheme = resolveTheme(theme)
 
-  if (!mounted) return <>{children}</>
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme, mounted }}>
       {children}
     </ThemeContext.Provider>
   )
